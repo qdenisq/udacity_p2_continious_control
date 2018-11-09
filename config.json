@@ -1,9 +1,18 @@
 {
- "env_file": "C:/Study/udacity_p2_continious_control/Reacher_20_agent/Reacher.exe",
-"seed": 1234,
-"masks":
-         {"id":"valore"},
-"om_points":"value",
-"parameters":
-         {"id":"valore"}
+"env":{
+	"env_file": "C:/Study/udacity_p2_continious_control/Reacher_20_agent/Reacher.exe",
+	"seed": 1234
+	},
+
+"agent":{
+	"hidden_size": [128, 128]
+	},
+
+"ppo":{
+	"discount": 0.995,
+	"epsilon": 0.1,
+	"num_rollouts_per_update": 20,
+	"num_updates": 4,
+	"learning_rate": 0.0001
+	}
 }

@@ -2,12 +2,24 @@ import json
 from pprint import pprint
 import numpy as np
 from src.environment import ReacherEnvironment
-
+from src.ppo import PPO
+from src.models import SimpleAgent
 
 def train(*args, **kwargs):
     print(kwargs)
-    env = ReacherEnvironment(**kwargs)
-    env.reset(train_mode=False)
+
+    env = ReacherEnvironment(**kwargs['env'])
+    env.reset(train_mode=True)
+
+    state_dim = env.get_state_dim()
+    action_dim = env.get_action_dim()
+    kwargs['agent']['state_dim'] = state_dim
+    kwargs['agent']['action_dim'] = action_dim
+
+    agent = SimpleAgent(**kwargs['agent'])
+    alg = PPO(agent=agent, **kwargs['ppo'])
+    alg.train(env, 100)
+
 
     num_agents = env.get_num_agents()
     action_size = env.get_action_dim()
