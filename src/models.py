@@ -1,6 +1,6 @@
 import torch
 from torch.nn import Module, ModuleList, Linear, ReLU, Sigmoid
-from torch.distributions import MultivariateNormal
+from torch.distributions import MultivariateNormal, Normal
 
 
 
@@ -22,19 +22,21 @@ class SimpleAgent(Module):
             x = l(x)
             x = self.relu(x)
         mu = self.mu(x)
-        sigma = self.sigmoid(self.sigma(x))
-        return mu, sigma
+        log_var = self.sigma(x)
+        return mu, log_var
 
     def act(self, state):
-        mu, sigma = self.forward(state)
-        ms = [MultivariateNormal(mu[i, :], torch.eye(mu.shape[-1])*sigma[i, :]) for i in range(mu.shape[0])]
-        action = torch.stack([m.sample() for m in ms], dim=0)
-        probs = torch.stack([(ms[i].log_prob(action[i])).exp() for i in range(action.shape[0])], dim=0)
-        return action.detach().cpu().numpy(), probs.detach().cpu().numpy()
+        mu, log_var = self.forward(state)
+        sigmas = log_var.exp().sqrt()
+        dists = Normal(mu, sigmas)
+        actions = dists.sample()
+        log_probs = dists.log_prob(actions).sum(dim=-1)
+        return actions.detach().cpu().numpy(), log_probs.detach().cpu().numpy()
 
     def get_prob(self, states, actions):
-        mu, sigma = self.forward(states)
-        ms = [MultivariateNormal(mu[i, :], torch.eye(mu.shape[-1]) * sigma[i, :]) for i in range(mu.shape[0])]
-        probs = torch.stack([(ms[i].log_prob(actions[i])).exp() for i in range(actions.shape[0])], dim=0)
-        return probs
+        mu, log_var = self.forward(states)
+        sigmas = log_var.exp().sqrt()
+        dists = Normal(mu, sigmas)
+        log_probs = dists.log_prob(actions).sum(dim=-1)
+        return log_probs
 

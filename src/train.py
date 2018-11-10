@@ -16,6 +16,8 @@ def train(*args, **kwargs):
     kwargs['agent']['state_dim'] = state_dim
     kwargs['agent']['action_dim'] = action_dim
 
+
+
     agent = SimpleAgent(**kwargs['agent'])
     alg = PPO(agent=agent, **kwargs['ppo'])
     alg.train(env, 100)

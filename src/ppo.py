@@ -1,7 +1,7 @@
 import numpy as np
 import progressbar as pb
 import torch
-
+import time
 
 class PPO:
     def __init__(self, *args, agent=None, **kwargs):
@@ -52,7 +52,11 @@ class PPO:
                   pb.Bar(), ' ', pb.ETA()]
         timer = pb.ProgressBar(widgets=widget, maxval=num_steps).start()
         for step in range(num_steps):
+            t0 = time.time()
+
             states, actions, rewards, old_probs = self.roll_out(env, self.__num_rollouts)
+
+            t1 = time.time()
 
             discount = self.__discount ** np.arange(rewards.shape[0])
             rewards_discounted = rewards * discount[:, np.newaxis]
@@ -61,21 +65,40 @@ class PPO:
             std_rewards = np.std(rewards_future, axis=1) + 1.0e-10
             rewards_normalized = (rewards_future - mean_rewards[:, np.newaxis]) / std_rewards[:, np.newaxis]
 
-            rewards_normalized = torch.Tensor(rewards_normalized.flatten())
-            states = torch.Tensor(states.reshape(-1, env.get_state_dim()))
-            actions = torch.Tensor(actions.reshape(-1, env.get_action_dim()))
-            old_probs = torch.Tensor(old_probs.flatten())
+            rewards_normalized = torch.tensor(rewards_normalized.flatten(), dtype=torch.float, requires_grad=False)
+            states = torch.tensor(states.reshape(-1, env.get_state_dim()), dtype=torch.float, requires_grad=False)
+            actions = torch.tensor(actions.reshape(-1, env.get_action_dim()), dtype=torch.float, requires_grad=False)
+            old_probs = torch.tensor(old_probs.flatten(), dtype=torch.float, requires_grad=False)
+
+            t2 = time.time()
+            get_prob_time = 0.
+            t5 = 0.
+            t6 = 0.
+            t7 = 0.
             for i in range(self.__num_updates):
                 # calc new probs
+                t4 = time.time()
                 new_probs = self.agent.get_prob(states, actions)
+                get_prob_time += time.time() - t4
 
+                t = time.time()
                 ratio = new_probs / old_probs
                 clip = torch.clamp(ratio, 1 - self.__epsilon, 1 + self.__epsilon)
                 clipped_surrogate = torch.min(ratio * rewards_normalized, clip * rewards_normalized)
                 surrogate = torch.mean(clipped_surrogate)
+                # surrogate = torch.mean(rewards_normalized)
+
+                t5 += time.time() - t
+                t = time.time()
                 self.optim.zero_grad()
                 surrogate.backward()
+                t6 += time.time() - t
+
+                t = time.time()
                 self.optim.step()
+                t7 += time.time() - t
+            t3 = time.time()
+            # print("rollout: {}, processing: {}, update: {}, get_prob: {}, {} backprop: {} {}".format(t1-t0, t2-t1, t3-t2, get_prob_time, t5, t6, t7))
 
             self.__epsilon *= .999
 
@@ -84,6 +107,7 @@ class PPO:
             # display some progress every 20 iterations
             if (step + 1) % 20 == 0:
                 print("Episode: {0:d}, score: {1:f}".format(step + 1, mean_score[-1]))
+            print("Episode: {0:d}, score: {1:f}".format(step + 1, mean_score[-1]))
 
             # update progress widget bar
             timer.update(step + 1)
