@@ -27,15 +27,16 @@ class SimpleAgent(Module):
 
     def act(self, state):
         mu, log_var = self.forward(state)
-        sigmas = log_var.exp().sqrt()
+        sigmas = log_var.exp().sqrt() + 1e-5
         dists = Normal(mu, sigmas)
         actions = dists.sample()
+        actions = torch.clamp(actions, -1, 1)
         log_probs = dists.log_prob(actions).sum(dim=-1)
         return actions.detach().cpu().numpy(), log_probs.detach().cpu().numpy()
 
     def get_prob(self, states, actions):
         mu, log_var = self.forward(states)
-        sigmas = log_var.exp().sqrt()
+        sigmas = log_var.exp().sqrt()+ 1e-5
         dists = Normal(mu, sigmas)
         log_probs = dists.log_prob(actions).sum(dim=-1)
         return log_probs
