@@ -20,7 +20,7 @@ def train(*args, **kwargs):
 
     agent = SimpleAgent(**kwargs['agent'])
     alg = PPO(agent=agent, **kwargs['ppo'])
-    alg.train(env, 100)
+    alg.train(env, 400)
 
 
     num_agents = env.get_num_agents()

@@ -5,14 +5,16 @@
 	},
 
 "agent":{
-	"hidden_size": [128, 128]
+	"seed":0,
+	"hidden_size": [128, 64]
 	},
 
 "ppo":{
-	"discount": 0.995,
-	"epsilon": 0.1,
+	"discount": 0.99,
+	"lambda": 0.95,
+	"epsilon": 0.2,
 	"num_rollouts_per_update": 20,
-	"num_updates": 4,
-	"learning_rate": 0.0001
+	"num_updates": 8,
+	"learning_rate": 0.0003
 	}
 }
