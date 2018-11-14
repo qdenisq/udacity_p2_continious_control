@@ -2,8 +2,8 @@ import json
 from pprint import pprint
 import numpy as np
 from src.environment import ReacherEnvironment
-from src.ppo import PPO
-from src.models import SimplePPOAgent
+from src.ddpg import DDPG
+from src.models import SimpleDDPGAgent
 
 def train(*args, **kwargs):
     print(kwargs)
@@ -16,10 +16,12 @@ def train(*args, **kwargs):
     kwargs['agent']['state_dim'] = state_dim
     kwargs['agent']['action_dim'] = action_dim
 
+    kwargs['ddpg']['device'] = 'cpu'
 
 
-    agent = SimplePPOAgent(**kwargs['agent'])
-    alg = PPO(agent=agent, **kwargs['ppo'])
+    agent = SimpleDDPGAgent(**kwargs['agent'])
+    target_agent = SimpleDDPGAgent(**kwargs['agent'])
+    alg = DDPG(agent=agent, target_agent=target_agent, **kwargs['ddpg'])
     alg.train(env, 400)
 
 
@@ -28,7 +30,7 @@ def train(*args, **kwargs):
     for i in range(2):
         done = False
         score = 0
-        state = env.reset(train_mode=True)
+        state = env.reset(train_mode=False)
         while not np.any(done):
             action = np.random.randn(num_agents, action_size)  # select an action (for each agent)
             action = np.clip(action, -1, 1)
