@@ -144,26 +144,6 @@ class PPO:
 
             num_updates = actions.shape[0] // self.minibatch_size
 
-            for k in range(self.num_epochs_actor):
-                for _ in range(num_updates):
-                    idx = np.random.randint(0, actions.shape[0], self.minibatch_size)
-                    advantages_batch = advantages[idx]
-                    returns_batch = returns[idx]
-                    old_log_probs_batch = old_log_probs[idx]
-                    states_batch = states[idx]
-                    actions_batch = actions[idx]
-
-                    new_log_probs = self.agent.get_prob(states_batch, actions_batch)
-
-                    ratio = (new_log_probs - old_log_probs_batch).exp()
-                    clipped = torch.clamp(ratio, 1. - self.epsilon, 1. + self.epsilon)
-                    surr = torch.min(ratio, clipped) * returns_batch
-                    objective = -surr.mean()
-
-                    self.actor_optim.zero_grad()
-                    objective.backward()
-                    self.actor_optim.step()
-
             for k in range(self.num_epochs_critic):
                 for _ in range(num_updates):
                     idx = np.random.randint(0, actions.shape[0], self.minibatch_size)
@@ -178,6 +158,31 @@ class PPO:
                     self.critic_optim.zero_grad()
                     critic_loss.backward()
                     self.critic_optim.step()
+
+            values_pred = self.agent.V(states)
+            advantages = (returns - values_pred).detach()
+
+            for k in range(self.num_epochs_actor):
+                for _ in range(num_updates):
+                    idx = np.random.randint(0, actions.shape[0], self.minibatch_size)
+                    advantages_batch = advantages[idx]
+                    returns_batch = returns[idx]
+                    old_log_probs_batch = old_log_probs[idx]
+                    states_batch = states[idx]
+                    actions_batch = actions[idx]
+
+                    new_log_probs = self.agent.get_prob(states_batch, actions_batch)
+
+                    ratio = (new_log_probs.view(-1, 1) - old_log_probs_batch).exp()
+                    clipped = torch.clamp(ratio, 1. - self.epsilon, 1. + self.epsilon)
+                    surr = torch.min(ratio, clipped) * advantages_batch
+                    objective = -surr.mean()
+
+                    self.actor_optim.zero_grad()
+                    objective.backward()
+                    self.actor_optim.step()
+
+
 
             score = np.sum(rewards, axis=0).mean()
             print("episode: {} | score:{:.4f} | action_mean: {:.2f}, action_std: {:.2f}".format(episode, score, actions.mean(), actions.std()))
