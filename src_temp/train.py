@@ -2,8 +2,7 @@ import json
 from pprint import pprint
 import numpy as np
 from src.environment import ReacherEnvironment
-from src.ppo import PPO
-from src.models import SimplePPOAgent
+from src_temp.ppo import PPO, PPOAgent
 
 def train(*args, **kwargs):
     print(kwargs)
@@ -16,7 +15,7 @@ def train(*args, **kwargs):
     kwargs['agent']['state_dim'] = state_dim
     kwargs['agent']['action_dim'] = action_dim
 
-    agent = SimplePPOAgent(**kwargs['agent'])
+    agent = PPOAgent(**kwargs['agent'])
     alg = PPO(agent=agent, **kwargs['ppo'])
     alg.train(env, 400)
 

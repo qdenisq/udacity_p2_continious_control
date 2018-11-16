@@ -16,7 +16,11 @@
 	"num_rollouts_per_update": 40,
 	"num_updates": 2000,
 	"minibatch_size": 128,
-	"learning_rate": 0.0003
+	"learning_rate": 0.0003,
+	"actor_lr": 0.0003,
+	"critic_lr": 0.0003,
+	"num_epochs_actor": 5,
+	"num_epochs_critic": 5
 	},
 "ddpg":{
 	"discount": 0.99,
