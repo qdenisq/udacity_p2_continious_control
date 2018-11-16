@@ -23,7 +23,7 @@ class SimplePPOAgent(Module):
         self.linears.extend([Linear(hidden_size[i-1], hidden_size[i]) for i in range(1, len(hidden_size))])
         self.mu = Linear(hidden_size[-1], kwargs['action_dim'])
         # self.log_var = Linear(hidden_size[-1], kwargs['action_dim'])
-        self.log_var = Variable(torch.zeros(kwargs['action_dim']), requires_grad=True)
+        self.log_var = Variable(torch.ones(kwargs['action_dim'])*-1.5, requires_grad=True)
 
         # critic
         self.linears_critic = ModuleList([Linear(kwargs['state_dim'], hidden_size[0])])
@@ -41,7 +41,7 @@ class SimplePPOAgent(Module):
         x = input
         for l in self.linears:
             x = l(x)
-            x = self.tanh(x)
+            x = self.relu(x)
         mu = self.tanh(self.mu(x))
         # log_var = -2. -self.relu(self.log_var(x))
         log_var = self.log_var
@@ -58,8 +58,8 @@ class SimplePPOAgent(Module):
         dists = Normal(mu, sigmas)
         actions = dists.sample()
         actions = torch.clamp(actions, -1., 1.)
-        log_probs = dists.log_prob(actions).sum(dim=-1)
-
+        log_probs_0 = dists.log_prob(actions)
+        log_probs = log_probs_0.sum(dim=-1)
         return actions.detach().cpu().numpy(), log_probs.detach().cpu().numpy(), v.detach().cpu().numpy()
 
     def get_prob_and_v(self, states, actions):
@@ -68,6 +68,12 @@ class SimplePPOAgent(Module):
         dists = Normal(mu, sigmas)
         log_probs = dists.log_prob(actions).sum(dim=-1)
         return log_probs, v, mu, sigmas
+
+    def get_parameters(self):
+        return [*self.linears.parameters(), *self.mu.parameters(), self.log_var, *self.linears_critic.parameters(), *self.v.parameters()]
+        # return list(self.linears.parameters()) + list(self.mu.parameters()) + \
+        #        list(self.log_var) + list(self.linears_critic.parameters()) + list(self.v.parameters())
+
 
 
 class SimpleDDPGAgent(Module):

@@ -1,6 +1,6 @@
 {
 "env":{
-	"env_file": "C:/Study/udacity_p2_continious_control/Reacher_20_agent/Reacher.exe",
+	"env_file": "C:/Study/udacity_p2_continious_control/Reacher_20_agent_0/Reacher.exe",
 	"seed": 1234
 	},
 
@@ -13,9 +13,9 @@
 	"discount": 0.99,
 	"lambda": 0.95,
 	"epsilon": 0.2,
-	"num_rollouts_per_update": 20,
+	"num_rollouts_per_update": 40,
 	"num_updates": 2000,
-	"minibatch_size": 64,
+	"minibatch_size": 128,
 	"learning_rate": 0.0003
 	},
 "ddpg":{

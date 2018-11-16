@@ -7,7 +7,7 @@ import time
 class PPO:
     def __init__(self, *args, agent=None, **kwargs):
         self.agent = agent
-        self.optim = torch.optim.Adam(self.agent.parameters(), lr=kwargs['learning_rate'])
+        self.optim = torch.optim.Adam(self.agent.get_parameters(), lr=kwargs['learning_rate'])
         self.__discount = kwargs['discount']
         self.__lambda = kwargs['lambda']
         self.__epsilon = kwargs['epsilon']
@@ -84,8 +84,8 @@ class PPO:
                 returns[t] = last_return
 
             # normalize advanatge and returns
-            advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-5)
-            returns = (returns - returns.mean()) / (returns.std() + 1e-5)
+            advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-10)
+            returns = (returns - returns.mean()) / (returns.std() + 1e-10)
 
 
             #
@@ -136,7 +136,7 @@ class PPO:
                 loss = self.compute_loss(new_probs, old_probs_batch, v_pred, returns_batch, advantages_batch, mus, sigmas)
                 self.optim.zero_grad()
                 loss.backward()
-                torch.nn.utils.clip_grad_norm_(self.agent.parameters(), 1)
+                # torch.nn.utils.clip_grad_norm_(self.agent.parameters(), 1)
                 self.optim.step()
 
             self.__epsilon *= .999
@@ -147,6 +147,7 @@ class PPO:
             if (step + 1) % 20 == 0:
                 print("Episode: {0:d}, score: {1:f}".format(step + 1, mean_score[-1]))
             print("Episode: {0:d}, score: {1:f}".format(step + 1, mean_score[-1]))
+            print(self.agent.log_var)
 
 
 

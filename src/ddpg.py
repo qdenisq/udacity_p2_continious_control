@@ -9,12 +9,13 @@ import time
 # Based on http://math.stackexchange.com/questions/1287634/implementing-ornstein-uhlenbeck-in-matlab
 class OrnsteinUhlenbeckActionNoise:
 
-    def __init__(self, action_dim, mu=0, theta=0.15, sigma=0.2):
+    def __init__(self, action_dim, mu=0, theta=0.15, sigma=0.2, seed=0):
         self.action_dim = action_dim
         self.mu = mu
         self.theta = theta
         self.sigma = sigma
         self.X = np.ones(self.action_dim) * self.mu
+        self.seed = np.random.seed(seed)
 
     def reset(self):
         self.X = np.ones(self.action_dim) * self.mu
@@ -83,6 +84,7 @@ class DDPG:
                 action = self.agent.act(torch.Tensor(state)).detach().cpu().numpy()
                 noise = [noise_gen.sample() for _ in range(env.get_num_agents())]
                 noised_action = action + noise
+                noised_action = np.clip(noised_action, -1., 1.)
                 next_state, reward, done = env.step(noised_action.squeeze())
 
                 score += np.mean(reward)

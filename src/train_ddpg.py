@@ -8,6 +8,8 @@ from src.models import SimpleDDPGAgent
 def train(*args, **kwargs):
     print(kwargs)
 
+    np.random.seed(0)
+
     env = ReacherEnvironment(**kwargs['env'])
     env.reset(train_mode=True)
 

@@ -1,4 +1,6 @@
 **/.idea/
+**/Reacher_1_agent_0
+**/Reacher_20_agent_0
 
 .ipynb_checkpoints/
 src/__pycache__/
