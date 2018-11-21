@@ -17,7 +17,7 @@ def train(*args, **kwargs):
 
     agent = PPOAgent(**kwargs['agent'])
     alg = PPO(agent=agent, **kwargs['ppo'])
-    alg.train(env, 400)
+    alg.train(env, 800)
 
 
 if __name__ == '__main__':

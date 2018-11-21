@@ -7,7 +7,7 @@ import time
 class PPO:
     def __init__(self, *args, agent=None, **kwargs):
         self.agent = agent
-        self.optim = torch.optim.Adam(self.agent.get_parameters(), lr=kwargs['learning_rate'])
+        self.optim = torch.optim.SGD(self.agent.get_parameters(), lr=kwargs['learning_rate'])
         self.__discount = kwargs['discount']
         self.__lambda = kwargs['lambda']
         self.__epsilon = kwargs['epsilon']
@@ -63,7 +63,7 @@ class PPO:
         action_penalty = 1e3 * torch.abs(torch.mean(mus)) + 1e3 * torch.mean(sigmas)
 
         loss = surrogate + critic_loss + ent_loss
-        return loss
+        return loss, surrogate, critic_loss
 
     def train(self, env, num_steps):
         mean_score = []
@@ -133,12 +133,12 @@ class PPO:
 
                 # calc new probs
                 new_probs, v_pred, mus, sigmas = self.agent.get_prob_and_v(states_batch, actions_batch)
-                loss = self.compute_loss(new_probs, old_probs_batch, v_pred, returns_batch, advantages_batch, mus, sigmas)
+                loss, critic_loss, actor_loss = self.compute_loss(new_probs, old_probs_batch, v_pred, returns_batch, advantages_batch, mus, sigmas)
                 self.optim.zero_grad()
                 loss.backward()
                 # torch.nn.utils.clip_grad_norm_(self.agent.parameters(), 1)
                 self.optim.step()
-
+                print(actor_loss, critic_loss)
             self.__epsilon *= .999
 
             mean_score.append(np.mean(np.sum(rewards, axis=0)))
