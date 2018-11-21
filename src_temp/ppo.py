@@ -64,7 +64,7 @@ class PPOAgent(Module):
         return log_prob, dists.entropy()
 
     def get_actor_parameters(self):
-        return [*self.a_fc1.parameters(), *self.a_fc2.parameters(), *self.mean.parameters(), *self.log_var.parameters()]
+        return [*self.a_fc1.parameters(), *self.a_fc2.parameters(), *self.mean.parameters(), self.log_var]
 
     def get_critic_parameters(self):
         return [*self.c_fc1.parameters(), *self.c_fc2.parameters(), *self.v.parameters()]
@@ -144,7 +144,7 @@ class PPO:
             # Update
 
             returns = torch.from_numpy(returns).float().view(-1, 1)
-            states = torch.from_numpy(states).float().view(-1, env.get_state_dim())
+            states0 = torch.from_numpy(states).float().view(-1, env.get_state_dim())
             actions = torch.from_numpy(actions).float().view(-1, env.get_action_dim())
 
             old_log_probs = torch.from_numpy(old_log_probs).float().view(-1, 1)
@@ -156,7 +156,7 @@ class PPO:
                     idx = np.random.randint(0, actions.shape[0], self.minibatch_size)
 
                     returns_batch = returns[idx]
-                    states_batch = states[idx]
+                    states_batch = states0[idx]
 
                     values_pred = self.agent.V(states_batch)
 
@@ -167,12 +167,15 @@ class PPO:
                     torch.nn.utils.clip_grad_norm_(self.agent.get_critic_parameters(), self.clip_grad)
                     self.critic_optim.step()
 
-            values_pred = self.agent.V(states)
-            values_pred = torch.cat(values_pred, torch.zeros(1, rewards.shape[1]), dim=0).detach().cpu().numpy()
+            values_pred = self.agent.V(states0)
+            values_pred = values_pred.reshape(T, env.get_num_agents(), 1)
+            values_pred = torch.cat([values_pred, torch.zeros(1, env.get_num_agents(), 1)], dim=0).detach().cpu().numpy()
             # advantages = (returns - values_pred).detach()
 
             for t in reversed(range(T)):
-                delta = rewards[t] + self.discount * values_pred[t + 1] * (1 - dones[t]) - values_pred[t]
+                terminal = (1 - dones[t]).flatten()
+                next_val = self.discount * values_pred[t + 1] * terminal.reshape((-1,1))
+                delta = rewards[t] + next_val - values_pred[t]
                 last_advantage = delta + self.discount * self.lmbda * last_advantage
                 advantages[t] = last_advantage
                 # terminals = torch.Tensor(terminals).unsqueeze(1)
@@ -189,7 +192,7 @@ class PPO:
 
             advantages = (advantages - advantages.mean()) / advantages.std()
             advantages = torch.from_numpy(advantages).float().view(-1, 1)
-
+            states = torch.from_numpy(states).float().view(-1, env.get_state_dim())
 
             for k in range(self.num_epochs_actor):
                 for _ in range(num_updates):
