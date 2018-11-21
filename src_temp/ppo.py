@@ -11,11 +11,10 @@ class PPOAgent(Module):
     def __init__(self, **kwargs):
         super(PPOAgent, self).__init__()
 
-
         self.a_fc1 = Linear(kwargs['state_dim'], num_hidden)
         self.a_fc2 = Linear(num_hidden, num_hidden)
         self.mean = Linear(num_hidden, kwargs['action_dim'])
-        self.log_var = torch.nn.Parameter(torch.ones(kwargs['action_dim']))
+        self.log_var = torch.autograd.Variable(torch.zeros(kwargs['action_dim']))
 
         self.c_fc1 = Linear(kwargs['state_dim'], num_hidden)
         self.c_fc2 = Linear(num_hidden, num_hidden)
@@ -38,7 +37,7 @@ class PPOAgent(Module):
         action = torch.clamp(action, -1, 1)
 
         log_probs = dists.log_prob(action)
-        log_prob = log_probs.sum(dim=-1)
+        log_prob = log_probs.sum(dim=-1, keepdim=True)
 
         return action, log_prob, dists.entropy()
 
@@ -59,7 +58,7 @@ class PPOAgent(Module):
 
         dists = Normal(mean, sigmas)
 
-        log_prob = dists.log_prob(action).sum(dim=-1)
+        log_prob = dists.log_prob(action).sum(dim=-1, keepdim=True)
 
         return log_prob, dists.entropy()
 
@@ -69,12 +68,13 @@ class PPOAgent(Module):
     def get_critic_parameters(self):
         return [*self.c_fc1.parameters(), *self.c_fc2.parameters(), *self.v.parameters()]
 
+
 class PPO:
     def __init__(self, agent=None, **kwargs):
         self.agent = agent
 
-        self.actor_optim = torch.optim.SGD(agent.get_actor_parameters(), lr=kwargs['actor_lr'])
-        self.critic_optim = torch.optim.SGD(agent.get_critic_parameters(), lr=kwargs['critic_lr'])
+        self.actor_optim = torch.optim.Adam(agent.get_actor_parameters(), lr=kwargs['actor_lr'], eps=1e-5)
+        self.critic_optim = torch.optim.Adam(agent.get_critic_parameters(), lr=kwargs['critic_lr'], eps=1e-5)
 
         self.num_epochs_actor = kwargs['num_epochs_actor']
         self.num_epochs_critic = kwargs['num_epochs_critic']
@@ -128,7 +128,7 @@ class PPO:
             old_log_probs = np.asarray(old_log_probs)
 
             T = rewards.shape[0]
-            last_advantage = np.zeros(rewards.shape[1])
+            last_advantage = np.zeros((rewards.shape[1], 1))
             last_return = np.zeros(rewards.shape[1])
             returns = np.zeros(rewards.shape)
             advantages = np.zeros(rewards.shape)
@@ -173,11 +173,10 @@ class PPO:
             # advantages = (returns - values_pred).detach()
 
             for t in reversed(range(T)):
-                terminal = (1 - dones[t]).flatten()
-                next_val = self.discount * values_pred[t + 1] * terminal.reshape((-1,1))
-                delta = rewards[t] + next_val - values_pred[t]
+                next_val = self.discount * values_pred[t + 1] * (1 - dones[t])[:, np.newaxis]
+                delta = rewards[t][:, np.newaxis] + next_val - values_pred[t]
                 last_advantage = delta + self.discount * self.lmbda * last_advantage
-                advantages[t] = last_advantage
+                advantages[t,:] = last_advantage[:,0]
                 # terminals = torch.Tensor(terminals).unsqueeze(1)
                 # rewards = torch.Tensor(rewards).unsqueeze(1)
                 # actions = torch.Tensor(actions)
@@ -209,14 +208,14 @@ class PPO:
                     obj = ratio * advantages_batch
                     obj_clipped = ratio.clamp(1.0 - self.epsilon,
                                               1.0 + self.epsilon) * advantages_batch
-                    policy_loss = -torch.min(obj, obj_clipped).mean(0) - self.beta * entropy_loss.mean()
+                    policy_loss = -torch.min(obj, obj_clipped).mean(0) - self.beta * entropy.mean()
 
-                    clipped = torch.clamp(ratio, 1. - self.epsilon, 1. + self.epsilon)
-                    surr = torch.min(ratio, clipped) * advantages_batch
-                    objective = -surr.mean()
+                    # clipped = torch.clamp(ratio, 1. - self.epsilon, 1. + self.epsilon)
+                    # surr = torch.min(ratio, clipped) * advantages_batch
+                    # objective = -surr.mean()
 
                     self.actor_optim.zero_grad()
-                    objective.backward()
+                    policy_loss.backward()
                     torch.nn.utils.clip_grad_norm_(self.agent.get_actor_parameters(), self.clip_grad)
                     self.actor_optim.step()
 
