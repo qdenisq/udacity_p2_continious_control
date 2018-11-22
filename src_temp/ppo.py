@@ -3,9 +3,9 @@ from torch.optim import Adam, sgd
 import torch
 from torch.nn import Module, Linear, ReLU, Tanh
 from torch.distributions import Normal
+import time
 
-
-num_hidden = 512
+num_hidden = 128
 
 class PPOAgent(Module):
     def __init__(self, **kwargs):
@@ -14,7 +14,8 @@ class PPOAgent(Module):
         self.a_fc1 = Linear(kwargs['state_dim'], num_hidden)
         self.a_fc2 = Linear(num_hidden, num_hidden)
         self.mean = Linear(num_hidden, kwargs['action_dim'])
-        self.log_var = torch.autograd.Variable(torch.zeros(kwargs['action_dim']))
+        # self.log_var = torch.autograd.Variable(torch.zeros(kwargs['action_dim']), requires_grad=True)
+        self.log_var = torch.nn.Parameter(torch.zeros(kwargs['action_dim']))
 
         self.c_fc1 = Linear(kwargs['state_dim'], num_hidden)
         self.c_fc2 = Linear(num_hidden, num_hidden)
@@ -28,7 +29,7 @@ class PPOAgent(Module):
         x = self.relu(self.a_fc1(x))
         x = self.relu(self.a_fc2(x))
         mean = self.tanh(self.mean(x))
-        log_var =self.log_var
+        log_var = self.log_var
 
         sigmas = log_var.exp().sqrt()
 
@@ -44,7 +45,7 @@ class PPOAgent(Module):
     def V(self, state):
         x = state
         x = self.relu(self.c_fc1(x))
-        # x = self.relu(self.c_fc2(x))
+        x = self.relu(self.c_fc2(x))
         v = self.v(x)
         return v
 
@@ -86,6 +87,8 @@ class PPO:
         self.beta = kwargs['beta']
         self.clip_grad = kwargs['clip_grad']
 
+        self.device = kwargs['device']
+
         pass
 
     def train(self, env, num_episodes):
@@ -100,24 +103,28 @@ class PPO:
             values = []
             old_log_probs = []
 
+            t0 = time.time()
+
             # Rollout
             while True:
-                action, old_log_prob, entropy = self.agent.act(torch.from_numpy(state).float())
-                value = self.agent.V(torch.from_numpy(state).float())
-                next_state, reward, done = env.step(action.detach().numpy())
+                action, old_log_prob, entropy = self.agent.act(torch.from_numpy(state).float().to(self.device))
+                value = self.agent.V(torch.from_numpy(state).float().to(self.device))
+                next_state, reward, done = env.step(action.detach().cpu().numpy())
 
                 states.append(state)
-                actions.append(action.detach().numpy())
+                actions.append(action.detach().cpu().numpy())
                 rewards.append(reward)
                 dones.append(done)
-                values.append(value.detach().numpy())
-                old_log_probs.append(old_log_prob.detach().numpy())
+                values.append(value.detach().cpu().numpy())
+                old_log_probs.append(old_log_prob.detach().cpu().numpy())
 
                 state = next_state
 
                 if np.any(done):
                     break
 
+
+            t1 = time.time()
             # Calc adv
 
             states = np.asarray(states)
@@ -143,11 +150,13 @@ class PPO:
 
             # Update
 
-            returns = torch.from_numpy(returns).float().view(-1, 1)
-            states0 = torch.from_numpy(states).float().view(-1, env.get_state_dim())
-            actions = torch.from_numpy(actions).float().view(-1, env.get_action_dim())
+            returns = torch.from_numpy(returns).float().to(self.device).view(-1, 1)
+            states0 = torch.from_numpy(states).float().to(self.device).view(-1, env.get_state_dim())
+            actions = torch.from_numpy(actions).float().to(self.device).view(-1, env.get_action_dim())
 
-            old_log_probs = torch.from_numpy(old_log_probs).float().view(-1, 1)
+            old_log_probs = torch.from_numpy(old_log_probs).to(self.device).float().view(-1, 1)
+
+            t2 = time.time()
 
             num_updates = actions.shape[0] // self.minibatch_size
 
@@ -167,10 +176,14 @@ class PPO:
                     torch.nn.utils.clip_grad_norm_(self.agent.get_critic_parameters(), self.clip_grad)
                     self.critic_optim.step()
 
+            t3 = time.time()
+
             values_pred = self.agent.V(states0)
             values_pred = values_pred.reshape(T, env.get_num_agents(), 1)
-            values_pred = torch.cat([values_pred, torch.zeros(1, env.get_num_agents(), 1)], dim=0).detach().cpu().numpy()
+            values_pred = torch.cat([values_pred, torch.zeros(1, env.get_num_agents(), 1).to(self.device)], dim=0).detach().cpu().numpy()
             # advantages = (returns - values_pred).detach()
+
+
 
             for t in reversed(range(T)):
                 next_val = self.discount * values_pred[t + 1] * (1 - dones[t])[:, np.newaxis]
@@ -190,8 +203,10 @@ class PPO:
                 # processed_rollout[i] = [states, actions, log_probs, returns, advantages]
 
             advantages = (advantages - advantages.mean()) / advantages.std()
-            advantages = torch.from_numpy(advantages).float().view(-1, 1)
-            states = torch.from_numpy(states).float().view(-1, env.get_state_dim())
+            advantages = torch.from_numpy(advantages).to(self.device).float().view(-1, 1)
+            states = torch.from_numpy(states).to(self.device).float().view(-1, env.get_state_dim())
+
+            t4 = time.time()
 
             for k in range(self.num_epochs_actor):
                 for _ in range(num_updates):
@@ -208,6 +223,7 @@ class PPO:
                     obj = ratio * advantages_batch
                     obj_clipped = ratio.clamp(1.0 - self.epsilon,
                                               1.0 + self.epsilon) * advantages_batch
+                    entropy = torch.zeros(entropy.shape).to(self.device)
                     policy_loss = -torch.min(obj, obj_clipped).mean(0) - self.beta * entropy.mean()
 
                     # clipped = torch.clamp(ratio, 1. - self.epsilon, 1. + self.epsilon)
@@ -219,8 +235,10 @@ class PPO:
                     torch.nn.utils.clip_grad_norm_(self.agent.get_actor_parameters(), self.clip_grad)
                     self.actor_optim.step()
 
+            t5 = time.time()
 
             score = np.sum(rewards, axis=0).mean()
-            print("episode: {} | score:{:.4f} | action_mean: {:.2f}, action_std: {:.2f}".format(episode, score, actions.mean(), actions.std()))
+            print("episode: {} | score:{:.4f} | action_mean: {:.2f}, action_std: {:.2f}".format(episode, score, actions.mean().cpu(), actions.std().cpu()))
+            print("times:", t1  -t0, t2 - t1, t3 - t2, t4 - t3, t5 - t4)
 
         pass
