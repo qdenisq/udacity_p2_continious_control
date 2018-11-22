@@ -8,18 +8,20 @@ import numpy as np
 def play(*args, **kwargs):
     print(kwargs)
 
-    fname = '../models/ppo_reacher_11_23_2018_12_16_AM.pt'
+    fname = '../models/ppo_reacher_11_23_2018_03_46_AM.pt'
     device = 'cpu'
-
+    kwargs['env']['seed'] = 0
     env = ReacherEnvironment(**kwargs['env'])
-    env.reset(train_mode=True)
+    env.reset(train_mode=False)
 
     agent = torch.load(fname).to(device)
-
+    print(agent)
+    agent.eval()
     for i in range(1):
         done = False
         score = 0
         state = env.reset(train_mode=False)
+        rewards=[]
         while not np.any(done):
             if 'ppo' in fname:
                 action, _, _, _ = agent(torch.from_numpy(state).float().to(device))
@@ -31,7 +33,8 @@ def play(*args, **kwargs):
             action = np.clip(action, -1, 1)
             env.step(action)
             state, reward, done = env.step(action)
-            score += np.mean(reward)
+            rewards.append(reward)
+            score = np.mean(np.asarray(rewards).sum(axis=0))
             print("\r play #{} | score: {}".format(i+1, score), end='')
 
 

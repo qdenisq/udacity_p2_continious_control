@@ -40,7 +40,7 @@ def train(*args, **kwargs):
     np.save(scores_fname, np.asarray(scores))
 
     plt.plot(scores)
-    plt.plot(np.convolve(scores, np.ones(100)/100))
+    plt.plot(np.convolve(scores, np.ones(100)/100)[:200])
     fig_name = "../reports/ppo_reacher_{}.png".format(dt)
     plt.savefig(fig_name)
 

@@ -24,7 +24,7 @@ class SimplePPOAgent(Module):
 
         # critic
         self.critic_bn = BatchNorm1d(kwargs['state_dim'])
-        self.critic_linears = ModuleList([BatchNorm1d(kwargs['state_dim']), Linear(kwargs['state_dim'], hidden_size[0])])
+        self.critic_linears = ModuleList([Linear(kwargs['state_dim'], hidden_size[0])])
         self.critic_linears.extend([Linear(hidden_size[i - 1], hidden_size[i]) for i in range(1, len(hidden_size))])
         self.v = Linear(hidden_size[-1], 1)
 

@@ -66,6 +66,8 @@ class PPO:
         for episode in range(num_episodes):
             states, actions, rewards, dones, values, old_log_probs = self.rollout(env)
 
+            score = rewards.sum(dim=0).mean()
+
             T = rewards.shape[0]
             last_advantage = torch.zeros((rewards.shape[1], 1))
             last_return = torch.zeros(rewards.shape[1])
@@ -135,7 +137,7 @@ class PPO:
                     torch.nn.utils.clip_grad_norm_(self.agent.get_actor_parameters(), self.clip_grad)
                     self.actor_optim.step()
 
-            score = np.sum(rewards.detach().cpu().numpy(), axis=0).mean()
+            # score = np.sum(rewards.detach().cpu().numpy(), axis=0).mean()
             scores.append(score)
             print("episode: {} | score:{:.4f} | action_mean: {:.2f}, action_std: {:.2f}".format(
                 episode, score, actions.mean().cpu(), actions.std().cpu()))
