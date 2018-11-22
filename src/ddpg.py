@@ -127,9 +127,4 @@ class DDPG:
 
             print("episode: {:d} | score: {:.4f}".format(episode, score))
             scores.append(score)
-
-    def save(self, fname):
-        pass
-
-    def load(self, fname):
-        pass
+        return scores

@@ -36,9 +36,12 @@ def train(*args, **kwargs):
     model_fname = "../models/ppo_reacher_{}.pt".format(dt)
     torch.save(agent, model_fname)
 
+    scores_fname = "../reports/ppo_reacher_{}".format(dt)
+    np.save(scores_fname, np.asarray(scores))
+
     plt.plot(scores)
     plt.plot(np.convolve(scores, np.ones(100)/100))
-    fig_name = "ppo_reacher_{}.png".format(dt)
+    fig_name = "../reports/ppo_reacher_{}.png".format(dt)
     plt.savefig(fig_name)
 
 

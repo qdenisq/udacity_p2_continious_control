@@ -19,8 +19,8 @@ class SimplePPOAgent(Module):
         self.actor_linears = ModuleList([Linear(kwargs['state_dim'], hidden_size[0])])
         self.actor_linears.extend([Linear(hidden_size[i - 1], hidden_size[i]) for i in range(1, len(hidden_size))])
         self.mu = Linear(hidden_size[-1], kwargs['action_dim'])
-        # self.log_var = Linear(hidden_size[-1], kwargs['action_dim'])
-        self.log_var = Variable(torch.zeros(kwargs['action_dim']), requires_grad=True)
+        self.log_var = Linear(hidden_size[-1], kwargs['action_dim'])
+        # self.log_var = torch.nn.Parameter(torch.zeros(kwargs['action_dim']))
 
         # critic
         self.critic_bn = BatchNorm1d(kwargs['state_dim'])
@@ -41,7 +41,7 @@ class SimplePPOAgent(Module):
             x = l(x)
             x = self.relu(x)
         mu = self.tanh(self.mu(x))
-        log_var = -self.relu(self.log_var)
+        log_var = -self.relu(self.log_var(x))
         sigmas = log_var.exp().sqrt()
         dists = Normal(mu, sigmas)
         if action is None:
@@ -57,7 +57,7 @@ class SimplePPOAgent(Module):
         return action, log_prob, dists.entropy(), v
 
     def get_actor_parameters(self):
-        return [*self.actor_bn.parameters(), *self.actor_linears.parameters(), *self.mu.parameters(), self.log_var]
+        return [*self.actor_bn.parameters(), *self.actor_linears.parameters(), *self.mu.parameters(), *self.log_var.parameters()]
 
     def get_critic_parameters(self):
         return [*self.critic_bn.parameters(), *self.critic_linears.parameters(), *self.v.parameters()]
@@ -67,8 +67,8 @@ class SimpleDDPGAgent(Module):
     def __init__(self, **kwargs):
         super(SimpleDDPGAgent, self).__init__()
 
-        torch.manual_seed(kwargs['seed'])
-        torch.cuda.manual_seed(kwargs['seed'])
+        # torch.manual_seed(kwargs['seed'])
+        # torch.cuda.manual_seed(kwargs['seed'])
 
         hidden_size = kwargs['hidden_size']
         # actor

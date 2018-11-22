@@ -26,7 +26,7 @@ def train(*args, **kwargs):
     agent = SimpleDDPGAgent(**kwargs['agent'])
     target_agent = SimpleDDPGAgent(**kwargs['agent'])
     alg = DDPG(agent=agent, target_agent=target_agent, **kwargs['ddpg'])
-    scores = alg.train(env, 10)
+    scores = alg.train(env, 200)
 
     dt = str(datetime.datetime.now().strftime("%m_%d_%Y_%I_%M_%p"))
     model_fname = "../models/ddpg_reacher_{}.pt".format(dt)
@@ -34,8 +34,10 @@ def train(*args, **kwargs):
 
     plt.plot(scores)
     plt.plot(np.convolve(scores, np.ones(100) / 100))
-    fig_name = "ddpg_reacher_{}.png".format(dt)
+    fig_name = "../reports/ddpg_reacher_{}.png".format(dt)
     plt.savefig(fig_name)
+    scores_fname = "../reports/ddpg_reacher_{}".format(dt)
+    np.save(scores_fname, np.asarray(scores))
 
 
 if __name__ == '__main__':

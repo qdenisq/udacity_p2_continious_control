@@ -1,6 +1,6 @@
 {
 "env":{
-	"env_file": "C:/Study/udacity_p2_continious_control/Reacher_20_agent/Reacher.exe",
+	"env_file": "C:/Study/udacity_p2_continious_control/Reacher_20_agent_0/Reacher.exe",
 	"seed": 1234
 	},
 

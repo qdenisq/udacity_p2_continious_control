@@ -8,7 +8,7 @@ import numpy as np
 def play(*args, **kwargs):
     print(kwargs)
 
-    fname = '../models/ppo_reacher_11_22_2018_06_38_PM.pt'
+    fname = '../models/ppo_reacher_11_23_2018_12_16_AM.pt'
     device = 'cpu'
 
     env = ReacherEnvironment(**kwargs['env'])
@@ -16,7 +16,7 @@ def play(*args, **kwargs):
 
     agent = torch.load(fname).to(device)
 
-    for i in range(2):
+    for i in range(1):
         done = False
         score = 0
         state = env.reset(train_mode=False)
