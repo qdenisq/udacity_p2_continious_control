@@ -30,7 +30,7 @@ def train(*args, **kwargs):
 
     agent = SimplePPOAgent(**kwargs['agent']).to(device)
     alg = PPO(agent=agent, **kwargs['ppo'])
-    scores = alg.train(env, 200)
+    scores = alg.train(env, 300)
 
     dt = str(datetime.datetime.now().strftime("%m_%d_%Y_%I_%M_%p"))
     model_fname = "../models/ppo_reacher_{}.pt".format(dt)

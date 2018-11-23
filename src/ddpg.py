@@ -38,11 +38,10 @@ class DDPG:
 
         self.__minibatch = kwargs['minibatch_size']
 
-        self.actor_optim = torch.optim.Adam(self.agent.get_actor_parameters(), lr=kwargs['learning_rate'])
-        self.critic_optim = torch.optim.Adam(self.agent.get_critic_parameters(), lr=kwargs['learning_rate'])
+        self.actor_optim = torch.optim.Adam(self.agent.get_actor_parameters(), lr=kwargs['actor_lr'])
+        self.critic_optim = torch.optim.Adam(self.agent.get_critic_parameters(), lr=kwargs['critic_lr'])
 
         self.__discount = kwargs['discount']
-        self.__epsilon = kwargs['epsilon']
         self.__tau = kwargs['tau']
         return
 

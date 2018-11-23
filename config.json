@@ -25,10 +25,10 @@
 "ddpg":{
 	"discount": 0.99,
 	"tau": 0.001,
-	"epsilon": 0.2,
 	"buffer_size": 1e4,
 	"minibatch_size": 64,
 	"seed": 0,
-	"learning_rate": 0.0003
+	"actor_lr": 0.0003,
+	"critic_lr": 0.0003
 	}
 }

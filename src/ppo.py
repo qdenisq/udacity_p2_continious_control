@@ -142,4 +142,8 @@ class PPO:
             print("episode: {} | score:{:.4f} | action_mean: {:.2f}, action_std: {:.2f}".format(
                 episode, score, actions.mean().cpu(), actions.std().cpu()))
         print("Training finished. Result score: ", score)
+
+
+        torch.save(self.agent, "ppo")
+
         return scores

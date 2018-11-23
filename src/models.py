@@ -31,7 +31,9 @@ class SimplePPOAgent(Module):
         self.relu = ReLU()
         self.tanh = Tanh()
 
-        self.apply(init_weights)  # xavier uniform init
+        self.apply(init_weights) # xavier uniform init
+        self.eval()
+
         # torch.nn.init.xavier_uniform_(self.log_var.weight, gain=0.01)
 
     def forward(self, state, action=None):
