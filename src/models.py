@@ -6,8 +6,8 @@ from torch.autograd import Variable
 
 def init_weights(m):
     if type(m) == Linear:
-        torch.nn.init.xavier_uniform_(m.weight, gain=0.1)
-        m.bias.data.fill_(0.01)
+        torch.nn.init.xavier_uniform_(m.weight, gain=1)
+        # m.bias.data.fill_(0.01)
 
 
 class SimplePPOAgent(Module):

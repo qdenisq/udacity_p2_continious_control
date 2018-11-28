@@ -1,24 +1,19 @@
 import json
 from pprint import pprint
-import numpy as np
 from src.environment import ReacherEnvironment
 from src.ppo import PPO
 from src.models import SimplePPOAgent
 import torch
 import numpy as np
-import random
 import datetime
 import matplotlib.pyplot as plt
+
 
 def train(*args, **kwargs):
     print(kwargs)
 
     device = 'cpu'
     kwargs['ppo']['device'] = device
-
-    # torch.manual_seed(kwargs['agent']['seed'])
-    # np.random.seed(kwargs['agent']['seed'])
-    # random.seed(kwargs['agent']['seed'])
 
     env = ReacherEnvironment(**kwargs['env'])
     env.reset(train_mode=True)
@@ -30,7 +25,24 @@ def train(*args, **kwargs):
 
     agent = SimplePPOAgent(**kwargs['agent']).to(device)
     alg = PPO(agent=agent, **kwargs['ppo'])
-    scores = alg.train(env, 300)
+    scores = alg.train(env, 200)
+
+    agent.eval()
+    for i in range(1):
+        done = False
+        state = env.reset(train_mode=True)
+        rewards = []
+        while not np.any(done):
+                # agent.eval()
+
+            action, _, _, _ = agent(torch.from_numpy(state).float().to(device))
+            action = action.detach().cpu().numpy()
+            action = np.clip(action, -1, 1)
+            env.step(action)
+            state, reward, done = env.step(action)
+            rewards.append(reward)
+            score = np.mean(np.asarray(rewards).sum(axis=0))
+            print("\r play #{} | score: {}".format(i + 1, score), end='')
 
     dt = str(datetime.datetime.now().strftime("%m_%d_%Y_%I_%M_%p"))
     model_fname = "../models/ppo_reacher_{}.pt".format(dt)

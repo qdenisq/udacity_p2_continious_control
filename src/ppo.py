@@ -76,25 +76,15 @@ class PPO:
 
             # calculate return and advantage
             for t in reversed(range(T)):
-                # return
+                # calc return
                 last_return = rewards[t] + last_return * self.discount * (1 - dones[t]).float()
                 returns[t] = last_return
-                # advantage
-                next_val = self.discount * values[t + 1] * (1 - dones[t]).float()[:, np.newaxis]
-                delta = rewards[t][:, np.newaxis] + next_val - values[t]
-                last_advantage = delta + self.discount * self.lmbda * last_advantage
-                advantages[t] = last_advantage.squeeze()
 
             # Update
             returns = returns.view(-1, 1)
             states = states.view(-1, env.get_state_dim())
             actions = actions.view(-1, env.get_action_dim())
             old_log_probs = old_log_probs.view(-1, 1)
-
-            advantages = advantages.view(-1,1)
-            advantages = (advantages - advantages.mean()) / advantages.std()
-
-            # returns = (returns - returns.mean()) / returns.std() # seems to make it worse
 
             # update critic
             num_updates = actions.shape[0] // self.minibatch_size
@@ -114,6 +104,18 @@ class PPO:
                     torch.nn.utils.clip_grad_norm_(self.agent.get_critic_parameters(), self.clip_grad)
                     self.critic_optim.step()
 
+            # calc advantages
+            self.agent.eval()
+            for t in reversed(range(T)):
+                # advantage
+                next_val = self.discount * values[t + 1] * (1 - dones[t]).float()[:, np.newaxis]
+                delta = rewards[t][:, np.newaxis] + next_val - values[t]
+                last_advantage = delta + self.discount * self.lmbda * last_advantage
+                advantages[t] = last_advantage.squeeze()
+
+            advantages = advantages.view(-1, 1)
+            advantages = (advantages - advantages.mean()) / advantages.std()
+
             # update actor
             self.agent.train()
             for k in range(self.num_epochs_actor):
@@ -130,20 +132,18 @@ class PPO:
                     obj = ratio * advantages_batch
                     obj_clipped = ratio.clamp(1.0 - self.epsilon,
                                               1.0 + self.epsilon) * advantages_batch
-                    policy_loss = -torch.min(obj, obj_clipped).mean(0) - self.beta * entropy.mean()
+                    entropy_loss = entropy.mean()
+
+                    policy_loss = -torch.min(obj, obj_clipped).mean(0) - self.beta * entropy_loss
 
                     self.actor_optim.zero_grad()
                     policy_loss.backward()
                     torch.nn.utils.clip_grad_norm_(self.agent.get_actor_parameters(), self.clip_grad)
                     self.actor_optim.step()
 
-            # score = np.sum(rewards.detach().cpu().numpy(), axis=0).mean()
             scores.append(score)
             print("episode: {} | score:{:.4f} | action_mean: {:.2f}, action_std: {:.2f}".format(
                 episode, score, actions.mean().cpu(), actions.std().cpu()))
+
         print("Training finished. Result score: ", score)
-
-
-        torch.save(self.agent, "ppo")
-
         return scores

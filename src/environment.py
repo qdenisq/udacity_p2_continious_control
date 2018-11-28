@@ -1,6 +1,4 @@
 from unityagents import UnityEnvironment
-import numpy as np
-
 
 class ReacherEnvironment:
     def __init__(self, env_file=None, seed=1234, **kwargs):
