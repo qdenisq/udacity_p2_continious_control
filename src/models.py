@@ -1,13 +1,12 @@
-import torch
+from torch.nn.init import xavier_uniform_
 from torch.nn import Module, ModuleList, Linear, ReLU, Sigmoid, Tanh, BatchNorm1d
-from torch.distributions import MultivariateNormal, Normal
-from torch.autograd import Variable
+from torch.distributions import Normal
+import torch
 
 
 def init_weights(m):
     if type(m) == Linear:
-        torch.nn.init.xavier_uniform_(m.weight, gain=1)
-        # m.bias.data.fill_(0.01)
+        xavier_uniform_(m.weight, gain=1)
 
 
 class SimplePPOAgent(Module):
@@ -32,9 +31,6 @@ class SimplePPOAgent(Module):
         self.tanh = Tanh()
 
         self.apply(init_weights) # xavier uniform init
-        self.eval()
-
-        # torch.nn.init.xavier_uniform_(self.log_var.weight, gain=0.01)
 
     def forward(self, state, action=None):
         x = state
@@ -68,9 +64,6 @@ class SimplePPOAgent(Module):
 class SimpleDDPGAgent(Module):
     def __init__(self, **kwargs):
         super(SimpleDDPGAgent, self).__init__()
-
-        # torch.manual_seed(kwargs['seed'])
-        # torch.cuda.manual_seed(kwargs['seed'])
 
         hidden_size = kwargs['hidden_size']
         # actor

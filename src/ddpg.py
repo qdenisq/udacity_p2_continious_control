@@ -1,14 +1,10 @@
 import numpy as np
-import progressbar as pb
 import torch
-from torch.nn import MSELoss
 from src.replay_buffer import ReplayBuffer
-import time
 
 
 # Based on http://math.stackexchange.com/questions/1287634/implementing-ornstein-uhlenbeck-in-matlab
 class OrnsteinUhlenbeckActionNoise:
-
     def __init__(self, action_dim, mu=0, theta=0.15, sigma=0.2, seed=0):
         self.action_dim = action_dim
         self.mu = mu
@@ -69,6 +65,12 @@ class DDPG:
             target_param.data.copy_(param.data)
 
     def train(self, env, num_episodes):
+        """
+        Train the agent to solve environment
+        :param env: environment object (ReacherEnvironment)
+        :param num_episodes: number of episodes (int)
+        :return scores: list of scores for each episode (list)
+        """
         noise_gen = OrnsteinUhlenbeckActionNoise(env.get_action_dim())
         noise_gen.reset()
         mean_score = []

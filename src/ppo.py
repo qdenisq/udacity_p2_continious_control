@@ -20,6 +20,16 @@ class PPO:
         self.device = kwargs['device']
 
     def rollout(self, env):
+        """
+           Runs an agent in the environment and collects trajectory
+           :param env: Environment to run the agent in (ReacherEnvironment)
+           :return states: (torch.Tensor)
+           :return actions: (torch.Tensor)
+           :return rewards: (torch.Tensor)
+           :return dones: (torch.Tensor)
+           :return values: (torch.Tensor)
+           :return old_log_probs: (torch.Tensor)
+           """
         state = env.reset()
         # Experiences
         states = []
@@ -35,7 +45,6 @@ class PPO:
             action, old_log_prob, _, value = self.agent(torch.from_numpy(state).float().to(self.device))
             action = np.clip(action.detach().cpu().numpy(), -1., 1.)
             _, old_log_prob, _, _ = self.agent(torch.from_numpy(state).float().to(self.device), torch.from_numpy(action).float().to(self.device))
-            # action = action.detach().cpu().numpy()
 
             next_state, reward, done = env.step(action)
 
@@ -61,7 +70,14 @@ class PPO:
 
         return states, actions, rewards, dones, values, old_log_probs
 
-    def train(self, env, num_episodes, target_score=30.):
+    def train(self, env, num_episodes):
+        """
+        Train the agent to solve environment
+        :param env: environment object (ReacherEnvironment)
+        :param num_episodes: number of episodes (int)
+        :return scores: list of scores for each episode (list)
+        """
+
         scores = []
         for episode in range(num_episodes):
             states, actions, rewards, dones, values, old_log_probs = self.rollout(env)

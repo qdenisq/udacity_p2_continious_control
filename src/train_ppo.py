@@ -33,8 +33,6 @@ def train(*args, **kwargs):
         state = env.reset(train_mode=True)
         rewards = []
         while not np.any(done):
-                # agent.eval()
-
             action, _, _, _ = agent(torch.from_numpy(state).float().to(device))
             action = action.detach().cpu().numpy()
             action = np.clip(action, -1, 1)
