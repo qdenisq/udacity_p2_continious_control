@@ -54,3 +54,4 @@ To play a trained agent, run the following
 > ```console
 > (drlnd) $ python3 ./play.py [path to a trained agent file]
 > ```
+Trained agents could be found in the `models` folder.
